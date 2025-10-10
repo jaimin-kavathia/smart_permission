@@ -1,0 +1,12 @@
+# Ignore local Flutter Version Manager files
+.fvm/
+
+# Ignore IDE files
+*.iml
+.idea/
+.vscode/
+
+# Build outputs
+build/
+example/build/
+*.lock
