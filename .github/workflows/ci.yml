@@ -1,0 +1,57 @@
+name: Flutter CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.35.4"
+          channel: stable
+          architecture: x64
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          if [ -d "example" ]; then
+            (cd example && flutter pub get)
+          fi
+
+      - name: Format code (root and example)
+        run: |
+          dart format -o write .
+          if [ -d "example" ]; then
+            (cd example && dart format -o write . || true)
+          fi
+
+      - name: Analyze root
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Analyze example
+        if: ${{ hashFiles('example/pubspec.yaml') != '' }}
+        run: (cd example && flutter analyze --no-fatal-infos --no-fatal-warnings)
+
+      - name: Run tests (root)
+        run: flutter test --no-pub
+
+      - name: Run tests (example)
+        if: ${{ hashFiles('example/pubspec.yaml') != '' }}
+        run: (cd example && flutter test --no-pub)

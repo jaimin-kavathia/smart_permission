@@ -1,0 +1,22 @@
+name: smart_permission_example
+description: Example app demonstrating the smart_permission package (Android/iOS).
+publish_to: "none"
+
+environment:
+  sdk: ^3.9.2
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  smart_permission:
+    path: ../
+  permission_handler: ^12.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

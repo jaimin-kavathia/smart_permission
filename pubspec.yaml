@@ -1,0 +1,33 @@
+name: smart_permission
+description: "Opinionated wrapper around permission_handler: one-line runtime permission requests with adaptive dialogs, per-permission titles/descriptions, theming, analytics, and batch support (Android & iOS)."
+version: 0.0.1
+repository: https://github.com/jaimin-kavathia/smart_permission
+issue_tracker: https://github.com/jaimin-kavathia/smart_permission/issues
+documentation: https://pub.dev/documentation/smart_permission/latest/
+license: MIT
+topics:
+  - permission
+  - runtime-permissions
+  - permission-handler
+  - adaptive-dialog
+  - app-settings
+
+environment:
+  sdk: ^3.4.0
+  flutter: ">=3.13.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  permission_handler: ^12.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+
+platforms:
+  android:
+  ios:
