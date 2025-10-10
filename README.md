@@ -12,6 +12,10 @@
   <em>Request permissions with one API — smart dialogs, adaptive styles, and complete UX flow handling built-in.</em>
 </p>
 
+<p align="center">
+  <img src="assets/images/smart_permission.png" alt="Smart Permission" width="100%">
+</p>
+
 ---
 
 ## ✨ Why smart_permission?
