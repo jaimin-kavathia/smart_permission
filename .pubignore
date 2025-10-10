@@ -1,12 +1,16 @@
-# Ignore local Flutter Version Manager files
+# FVM
 .fvm/
+.fvm/flutter_sdk
+.fvm/fvm_config.json
+.fvm/release
+.fvm/version
+.fvm/versions/
 
-# Ignore IDE files
+# IDE
 *.iml
 .idea/
 .vscode/
 
-# Build outputs
+# Build
 build/
 example/build/
-*.lock

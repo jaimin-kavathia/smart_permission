@@ -56,6 +56,7 @@ doc/api/
 /coverage/
 
 # FVM (Flutter Version Management)
+.fvm/
 .fvm/flutter_sdk
 .fvm/versions/
 .fvm/release
