@@ -26,3 +26,13 @@ doc/api/
 .flutter-plugins-dependencies
 /build/
 /coverage/
+/.fvm/
+.fvm/
+**/.fvm/
+.idea/
+.vscode/
+android/key.properties
+**/Generated.xcconfig
+**/Pods/
+example/ios/Podfile.lock
+example/ios/Runner.xcworkspace/
