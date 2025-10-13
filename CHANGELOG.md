@@ -1,3 +1,14 @@
+## 0.0.2
+
+Improvements and maintenance.
+
+- README: Added full‑width hero image and small copy refinements
+- Pubspec: Shortened description to 60–180 chars for SEO/snippet display
+- Lints: Fixed dangling library doc by adding `library smart_permission;`
+- Lints: Addressed `use_build_context_synchronously` with `context.mounted` checks
+- API: Replaced deprecated `Permission.calendar` with `calendarWriteOnly` and `calendarFullAccess`
+- Example: Added curly braces for single‑line if statements to satisfy lints
+
 ## 0.0.1
 
 Initial release.
