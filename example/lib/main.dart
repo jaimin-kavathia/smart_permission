@@ -340,6 +340,18 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                   'Location • ${_label(Permission.locationWhenInUse)}',
                 ),
               ),
+              // Explicit Web/Windows-friendly location button using generic location
+              FilledButton.tonalIcon(
+                onPressed: () => _request(
+                  Permission.location,
+                  description:
+                      'Please allow location in browser/system settings if prompted.',
+                ),
+                icon: const Icon(Icons.location_on_outlined),
+                label: Text(
+                  'Location (web/windows) • ${_label(Permission.location)}',
+                ),
+              ),
               FilledButton.tonalIcon(
                 onPressed: () => _request(
                   Permission.photos,

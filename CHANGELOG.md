@@ -1,3 +1,14 @@
+## 0.0.3
+
+Platform support and example updates.
+
+- Platforms: Declared support for Android, iOS, Web, and Windows
+- Core: Added robust try/catch + debug logs around permission flows
+- Core: Fallback dialog if opening app settings is unsupported/fails (web/windows)
+- Example: Added "Location (web/windows)" button to test browser/system flows
+- Example: Scaffolded Windows runner; removed macOS from declared platforms
+- Tooling: Project formatted and analyzed via FVM
+
 ## 0.0.2
 
 Improvements and maintenance.
