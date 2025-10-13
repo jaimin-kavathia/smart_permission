@@ -33,6 +33,7 @@ class SmartPermissionCore {
       final rationale = cfg.resolveDescription(permission, message);
       final dialog = cfg.customDialogBuilder ?? showPermissionDialog;
       final resolvedTitle = cfg.resolveTitle(permission, title);
+      if (!context.mounted) return false;
       final retry = await dialog(
         context,
         style: style,
@@ -53,6 +54,7 @@ class SmartPermissionCore {
     if (requested.isPermanentlyDenied || requested.isRestricted) {
       final cfg = SmartPermissionConfig.instance;
       final dialog = cfg.customDialogBuilder ?? showPermissionDialog;
+      if (!context.mounted) return false;
       final open = await dialog(
         context,
         style: style,

@@ -76,19 +76,24 @@ class _ExampleAppState extends State<ExampleApp> {
               SmartPermission.config
                 ..titleProvider = (p) {
                   if (p == Permission.camera) return 'Camera Access Needed';
-                  if (p == Permission.microphone)
+                  if (p == Permission.microphone) {
                     return 'Microphone Access Needed';
-                  if (p == Permission.locationWhenInUse)
+                  }
+                  if (p == Permission.locationWhenInUse) {
                     return 'Location Access Needed';
+                  }
                   return null;
                 }
                 ..descriptionProvider = (p) {
-                  if (p == Permission.camera)
+                  if (p == Permission.camera) {
                     return 'We need the camera to scan QR codes.';
-                  if (p == Permission.microphone)
+                  }
+                  if (p == Permission.microphone) {
                     return 'We need the microphone for voice features.';
-                  if (p == Permission.locationWhenInUse)
+                  }
+                  if (p == Permission.locationWhenInUse) {
                     return 'We use your location to show nearby stores.';
+                  }
                   return null;
                 };
             } else {

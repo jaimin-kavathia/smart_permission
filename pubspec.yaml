@@ -1,5 +1,5 @@
 name: smart_permission
-description: "Opinionated wrapper around permission_handler: one-line runtime permission requests with adaptive dialogs, per-permission titles/descriptions, theming, analytics, and batch support (Android & iOS)."
+description: "Flutter runtime permissions made easy: one-line requests, adaptive dialogs, and full flows on Android & iOS."
 version: 0.0.1
 repository: https://github.com/jaimin-kavathia/smart_permission
 issue_tracker: https://github.com/jaimin-kavathia/smart_permission/issues

@@ -71,7 +71,6 @@ class SmartPermissionConfig {
 
   // Built-in defaults for titles and descriptions per permission.
   final Map<Permission, String> _defaultTitles = <Permission, String>{
-    Permission.calendar: 'Calendar Access',
     Permission.calendarWriteOnly: 'Calendar Write Access',
     Permission.calendarFullAccess: 'Calendar Full Access',
     Permission.camera: 'Camera Access',
@@ -114,7 +113,6 @@ class SmartPermissionConfig {
   };
 
   final Map<Permission, String> _defaultDescriptions = <Permission, String>{
-    Permission.calendar: 'Allow access to read your calendar events.',
     Permission.calendarWriteOnly: 'Allow writing new events to your calendar.',
     Permission.calendarFullAccess:
         'Allow full read/write access to your calendars.',
@@ -175,8 +173,9 @@ class SmartPermissionConfig {
 
   String? resolveDescription(
       Permission permission, String? explicitDescription) {
-    if (explicitDescription != null && explicitDescription.isNotEmpty)
+    if (explicitDescription != null && explicitDescription.isNotEmpty) {
       return explicitDescription;
+    }
     final provider = descriptionProvider;
     if (provider != null) return provider(permission);
     // Built-in default
