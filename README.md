@@ -26,24 +26,31 @@ Most apps spend unnecessary time handling permission logic manually.
 ### 💡 What makes it different?
 
 - ✅ One-line permission requests (single or batch)
-- ✅ Handles **denied** and **permanently denied** flows automatically
+- ✅ Handles **denied**, **permanently denied**, and **restricted** flows automatically
+- ✅ Rich results (`SmartPermissionResult`) that tell you *why* a request failed
+- ✅ Waits for the user to return from **Settings** before re-checking
 - ✅ Adaptive **Material / Cupertino / Adaptive** dialogs
-- ✅ Built-in titles & descriptions (with custom overrides)
+- ✅ Built-in titles & descriptions (with custom overrides) + **full localization**
 - ✅ Global **theming**, **analytics hooks**, and **custom dialogs**
+- ✅ **Testable**: inject a fake gateway to widget-test your permission UX
 - ✅ Re-exports `Permission` — no need for multiple imports
 
 ---
 
 ## 🧩 Feature Highlights
 
-| Feature                        | Description                                             |
-| :----------------------------- | :------------------------------------------------------ |
-| 🔐 Easy API                    | `SmartPermission.request()` for one or many permissions |
-| 🎨 Adaptive Dialogs            | Material / Cupertino / Platform adaptive support        |
-| 🧭 Auto Flows                  | Handles denied/permanently denied states automatically  |
-| 🧱 Central Configuration       | Set global themes, titles, descriptions, analytics      |
-| 🧩 Custom Dialog Builders      | Build your own dialog UI if you need full control       |
-| 🧠 In-Memory Analytics Tracker | Tracks denied and permanently denied permissions        |
+| Feature                   | Description                                                        |
+| :------------------------ | :----------------------------------------------------------------- |
+| 🔐 Easy API               | `SmartPermission.request()` for one or many permissions            |
+| 🎯 Rich Results           | `requestResult()` returns granted/denied/permanentlyDenied/...     |
+| 🎨 Adaptive Dialogs       | Material / Cupertino / Platform adaptive support                   |
+| 🧭 Auto Flows             | Denied, permanently denied, and restricted handled automatically   |
+| 💬 Rationale First        | Optionally explain *before* the one-shot native prompt             |
+| 🌍 Localization           | Every built-in string replaceable via `SmartPermissionStrings`     |
+| 🧱 Central Configuration  | Global themes, titles, descriptions, analytics, navigator key      |
+| 🧩 Custom Dialog Builders | Build your own dialog UI if you need full control                  |
+| 📊 Analytics Hooks        | requested / granted / denied / permanently denied / restricted     |
+| 🧪 Test-Friendly          | Swap the platform gateway with a fake in widget tests              |
 
 ---
 
@@ -127,18 +134,17 @@ final result = await SmartPermission.requestResult(
   permission: Permission.camera,
 );
 
-switch (result) {
-  case SmartPermissionResult.granted:
-  case SmartPermissionResult.limited:
-  case SmartPermissionResult.provisional:
-    openCamera(); // or just check result.canProceed
-  case SmartPermissionResult.permanentlyDenied:
-    // Show a settings shortcut somewhere in your UI.
-  case SmartPermissionResult.restricted:
-    // Blocked by the OS (e.g. parental controls).
-  case SmartPermissionResult.denied:
-  case SmartPermissionResult.error:
-    // Try again later.
+if (result.canProceed) {
+  // granted, limited, or provisional
+  openCamera();
+} else if (result == SmartPermissionResult.permanentlyDenied) {
+  // Show a settings shortcut somewhere in your UI.
+  showSettingsShortcut();
+} else if (result == SmartPermissionResult.restricted) {
+  // Blocked by the OS (e.g. parental controls) — hide the feature.
+  hideCameraFeature();
+} else {
+  // denied or error — you can ask again later.
 }
 ```
 
