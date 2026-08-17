@@ -1,10 +1,10 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../ui/dialogs.dart';
 import '../ui/permission_dialog_style.dart';
+import 'permission_gateway.dart';
+import 'strings.dart';
 
 typedef DescriptionProvider = String? Function(Permission permission);
 typedef TitleProvider = String? Function(Permission permission);
@@ -15,17 +15,44 @@ typedef TitleProvider = String? Function(Permission permission);
 /// ```dart
 /// SmartPermission.config.analytics = MyAnalytics();
 /// ```
+/// Prefer `extends` over `implements` so that future hook additions do not
+/// break your implementation.
 abstract class PermissionAnalyticsTracker {
+  /// Called when a request flow starts for a permission that is not yet
+  /// granted (before any native prompt or dialog).
+  void onRequested(Permission permission) {}
+
+  /// Called when a request flow ends with the permission usable
+  /// (granted, limited, or provisional).
+  void onGranted(Permission permission) {}
+
   /// Called after the user denies a permission from the dialog flow.
   void onDenied(Permission permission) {}
 
   /// Called after the user refuses Settings or returns still blocked.
   void onPermanentlyDenied(Permission permission) {}
+
+  /// Called when the OS reports the permission as restricted
+  /// (e.g. parental controls).
+  void onRestricted(Permission permission) {}
 }
 
-class InMemoryPermissionAnalyticsTracker implements PermissionAnalyticsTracker {
+class InMemoryPermissionAnalyticsTracker extends PermissionAnalyticsTracker {
+  final Map<Permission, int> requestedCounts = <Permission, int>{};
+  final Map<Permission, int> grantedCounts = <Permission, int>{};
   final Map<Permission, int> deniedCounts = <Permission, int>{};
   final Map<Permission, int> permanentlyDeniedCounts = <Permission, int>{};
+  final Map<Permission, int> restrictedCounts = <Permission, int>{};
+
+  @override
+  void onRequested(Permission permission) {
+    requestedCounts.update(permission, (v) => v + 1, ifAbsent: () => 1);
+  }
+
+  @override
+  void onGranted(Permission permission) {
+    grantedCounts.update(permission, (v) => v + 1, ifAbsent: () => 1);
+  }
 
   @override
   void onDenied(Permission permission) {
@@ -35,6 +62,11 @@ class InMemoryPermissionAnalyticsTracker implements PermissionAnalyticsTracker {
   @override
   void onPermanentlyDenied(Permission permission) {
     permanentlyDeniedCounts.update(permission, (v) => v + 1, ifAbsent: () => 1);
+  }
+
+  @override
+  void onRestricted(Permission permission) {
+    restrictedCounts.update(permission, (v) => v + 1, ifAbsent: () => 1);
   }
 }
 
@@ -55,10 +87,49 @@ class SmartPermissionConfig {
   static final SmartPermissionConfig instance =
       SmartPermissionConfig._internal();
 
+  /// When set, dialogs can be shown without passing a [BuildContext]
+  /// (used by `SmartPermission.requestResult` and friends when `context`
+  /// is omitted). Assign the same key you pass to your `MaterialApp`.
   GlobalKey<NavigatorState>? navigatorKey;
+
   PermissionDialogBuilder? customDialogBuilder;
+
+  /// Style used when a call does not specify one.
   PermissionDialogStyle defaultDialogStyle = PermissionDialogStyle.adaptive;
+
   PermissionAnalyticsTracker analytics = InMemoryPermissionAnalyticsTracker();
+
+  /// All user-facing dialog strings; replace to localize.
+  SmartPermissionStrings strings = const SmartPermissionStrings();
+
+  /// When true, an explanation dialog is shown *before* the first native
+  /// prompt (recommended: you only get one native ask on iOS).
+  /// Can be overridden per call via `showRationaleFirst`.
+  bool showRationaleBeforeRequest = false;
+
+  /// Observes internal errors (platform call failures, dialog failures).
+  /// Errors are always logged with `debugPrint`; this lets you also report
+  /// them to e.g. Crashlytics.
+  void Function(Object error, StackTrace stackTrace)? onError;
+
+  /// Platform access used by the flows. Replace with a fake in tests.
+  SmartPermissionGateway gateway = const DefaultSmartPermissionGateway();
+
+  /// Restores every setting to its default value. Handy in tests.
+  void resetToDefaults() {
+    navigatorKey = null;
+    customDialogBuilder = null;
+    defaultDialogStyle = PermissionDialogStyle.adaptive;
+    analytics = InMemoryPermissionAnalyticsTracker();
+    strings = const SmartPermissionStrings();
+    showRationaleBeforeRequest = false;
+    onError = null;
+    gateway = const DefaultSmartPermissionGateway();
+    brightness = null;
+    primaryColor = null;
+    descriptionProvider = null;
+    titleProvider = null;
+  }
 
   // Theming
   Brightness? brightness; // light/dark
@@ -109,6 +180,7 @@ class SmartPermissionConfig {
     Permission.sensorsAlways: 'Sensors (Always)',
     Permission.assistant: 'Assistant Access',
     Permission.backgroundRefresh: 'Background App Refresh',
+    Permission.accessLocalNetwork: 'Local Network Access',
     Permission.unknown: 'Permission Required',
   };
 
@@ -168,6 +240,8 @@ class SmartPermissionConfig {
     Permission.assistant: 'Allow assistant integrations to function properly.',
     Permission.backgroundRefresh:
         'Allow the app to refresh content in background.',
+    Permission.accessLocalNetwork:
+        'Allow discovery and connection to devices on your local network.',
     Permission.unknown: 'This permission is required for full functionality.',
   };
 
@@ -181,10 +255,8 @@ class SmartPermissionConfig {
     // Built-in default
     final builtIn = _defaultDescriptions[permission];
     if (builtIn != null) return builtIn;
-    // Fallback generic
-    final platformName =
-        Platform.isIOS ? 'iOS' : (Platform.isAndroid ? 'Android' : 'device');
-    return 'Permission ${permission.toString()} is required on $platformName.';
+    // Fallback generic (localizable via [strings])
+    return strings.formatGenericRationale('$permission');
   }
 
   String? resolveTitle(Permission permission, String? explicitTitle) {

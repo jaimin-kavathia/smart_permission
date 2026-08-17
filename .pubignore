@@ -1,16 +1,54 @@
-# FVM
-.fvm/
-.fvm/flutter_sdk
-.fvm/fvm_config.json
-.fvm/release
-.fvm/version
-.fvm/versions/
+# .pubignore replaces .gitignore for pub publish file selection.
+# Keep the .gitignore rules, plus extra files that should not ship to pub.dev.
 
-# IDE
+# Extra exclusions for the published archive
+install.sh
+# README references the hero image via an absolute GitHub URL, so the heavy
+# asset does not need to ship inside the package archive.
+assets/
+
+# --- Mirrored from .gitignore ---
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
 *.iml
+*.ipr
+*.iws
 .idea/
 .vscode/
-
-# Build
+/pubspec.lock
+**/doc/api/
+.dart_tool/
+.packages
 build/
-example/build/
+doc/api/
+.env*
+*.dart.js
+*.info.json
+*.js
+*.js_
+*.js.deps
+*.js.map
+.flutter-plugins
+.flutter-plugins-dependencies
+/build/
+/coverage/
+.fvm/
+**/.gradle/
+**/local.properties
+**/captures/
+**/outputs/
+**/Pods/
+**/.symlinks/
+**/Flutter/Generated.xcconfig
+**/Flutter/ephemeral/
+**/.generated/
+**/xcuserdata/
+**/.last_build_id

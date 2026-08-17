@@ -93,6 +93,9 @@
 
     <!-- Exact alarms -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- Local network (Android 17+, Permission.accessLocalNetwork) -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <application
         android:label="smart_permission_example"
         android:name="${applicationName}"

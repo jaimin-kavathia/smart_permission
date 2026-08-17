@@ -3,8 +3,12 @@
 // A tiny, opinionated wrapper around `permission_handler` that:
 // - Requests a single or multiple permissions with one call
 // - Shows Material/Cupertino/adaptive dialogs for denied/permanently denied
-// - Offers settings redirection for permanently denied
-// - Provides configurable theming (light/dark, primaryColor)
+// - Offers settings redirection for permanently denied (and waits for the
+//   user to return before re-checking)
+// - Returns rich results via `requestResult` (granted/denied/permanentlyDenied/
+//   restricted/...), with a bool convenience API
+// - Provides configurable theming (light/dark, primaryColor), localizable
+//   strings, analytics hooks, and an injectable gateway for testing
 // - Supplies built‑in per‑permission titles and descriptions with easy overrides
 // - Re‑exports `Permission` so consumers only import this package
 //
@@ -36,6 +40,7 @@
 // );
 // ```
 export 'src/ui/permission_dialog_style.dart';
+export 'src/ui/dialogs.dart' show PermissionDialogBuilder;
 export 'src/smart_permission_public.dart';
 export 'package:permission_handler/permission_handler.dart'
     show Permission, PermissionStatus, openAppSettings;
@@ -46,3 +51,6 @@ export 'src/core/config.dart'
         InMemoryPermissionAnalyticsTracker,
         DescriptionProvider,
         TitleProvider;
+export 'src/core/smart_permission_result.dart';
+export 'src/core/strings.dart';
+export 'src/core/permission_gateway.dart';

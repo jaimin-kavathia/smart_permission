@@ -408,25 +408,37 @@ class _AnalyticsPanel extends StatefulWidget {
   State<_AnalyticsPanel> createState() => _AnalyticsPanelState();
 }
 
-class _AnalyticsPanelState extends State<_AnalyticsPanel>
-    implements PermissionAnalyticsTracker {
+/// Extend [PermissionAnalyticsTracker] (rather than implementing it) so new
+/// hooks added in future versions don't break your tracker.
+class _PanelAnalyticsTracker extends PermissionAnalyticsTracker {
+  _PanelAnalyticsTracker({
+    required this.onDeniedEvent,
+    required this.onPermaEvent,
+  });
+
+  final void Function(Permission) onDeniedEvent;
+  final void Function(Permission) onPermaEvent;
+
+  @override
+  void onDenied(Permission permission) => onDeniedEvent(permission);
+
+  @override
+  void onPermanentlyDenied(Permission permission) => onPermaEvent(permission);
+}
+
+class _AnalyticsPanelState extends State<_AnalyticsPanel> {
   final Map<Permission, int> _denied = <Permission, int>{};
   final Map<Permission, int> _perma = <Permission, int>{};
 
   @override
   void initState() {
     super.initState();
-    SmartPermission.config.analytics = this;
-  }
-
-  @override
-  void onDenied(Permission permission) {
-    setState(() => _denied.update(permission, (v) => v + 1, ifAbsent: () => 1));
-  }
-
-  @override
-  void onPermanentlyDenied(Permission permission) {
-    setState(() => _perma.update(permission, (v) => v + 1, ifAbsent: () => 1));
+    SmartPermission.config.analytics = _PanelAnalyticsTracker(
+      onDeniedEvent: (p) =>
+          setState(() => _denied.update(p, (v) => v + 1, ifAbsent: () => 1)),
+      onPermaEvent: (p) =>
+          setState(() => _perma.update(p, (v) => v + 1, ifAbsent: () => 1)),
+    );
   }
 
   @override
