@@ -1,3 +1,14 @@
+## 1.0.1
+
+Documentation polish.
+
+- README: fixed the result-API example (switch cases containing only
+  comments silently fall through in Dart 3; replaced with an if/else chain
+  using `result.canProceed`)
+- README: refreshed the feature lists to cover the 1.0.0 capabilities
+  (rich results, restricted flow, settings-return wait, rationale-first,
+  localization, analytics hooks, test gateway)
+
 ## 1.0.0
 
 First stable release. The 0.x API keeps working — `request(...)` and
