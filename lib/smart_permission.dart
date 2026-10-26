@@ -10,6 +10,8 @@
 // - Provides configurable theming (light/dark, primaryColor), localizable
 //   strings, analytics hooks, and an injectable gateway for testing
 // - Supplies built‑in per‑permission titles and descriptions with easy overrides
+// - `PermissionGate` widget and no-prompt status checks
+//   (`SmartPermission.status`, `hasPermission`)
 // - Re‑exports `Permission` so consumers only import this package
 //
 // Quick start:
@@ -41,6 +43,7 @@
 // ```
 export 'src/ui/permission_dialog_style.dart';
 export 'src/ui/dialogs.dart' show PermissionDialogBuilder;
+export 'src/ui/permission_gate.dart';
 export 'src/smart_permission_public.dart';
 export 'package:permission_handler/permission_handler.dart'
     show Permission, PermissionStatus, openAppSettings;

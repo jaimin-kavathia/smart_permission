@@ -28,6 +28,43 @@ class SmartPermission {
   /// rationale, and a navigator key for showing dialogs without a context.
   static SmartPermissionConfig get config => SmartPermissionConfig.instance;
 
+  /// Current state of [permission], without prompting the user or showing
+  /// any dialog.
+  ///
+  /// On Android the OS only reveals a permanent denial in response to a
+  /// request, so this reports [SmartPermissionResult.permanentlyDenied] only
+  /// once a request in this app session has found it (otherwise
+  /// [SmartPermissionResult.denied]).
+  ///
+  /// Usage:
+  /// ```dart
+  /// final result = await SmartPermission.status(Permission.camera);
+  /// if (result.canProceed) openCamera();
+  /// ```
+  static Future<SmartPermissionResult> status(Permission permission) =>
+      _core.statusResult(permission);
+
+  /// Like [status], for several [permissions] at once.
+  static Future<Map<Permission, SmartPermissionResult>> statuses(
+      List<Permission> permissions) async {
+    return {
+      for (final p in permissions) p: await _core.statusResult(p),
+    };
+  }
+
+  /// True when [permission] can be used right now (granted, limited, or
+  /// provisional). Never prompts.
+  static Future<bool> hasPermission(Permission permission) async =>
+      (await _core.statusResult(permission)).canProceed;
+
+  /// Opens this app's settings screen. Returns false when the platform
+  /// cannot open it (e.g. web).
+  ///
+  /// Unlike the permanently-denied flow of [request], this neither shows a
+  /// dialog nor waits for the user to come back; re-check with [status]
+  /// afterwards (`PermissionGate` does this automatically on resume).
+  static Future<bool> openSettings() => _core.openSettings();
+
   /// Requests [permission] and handles the full dialog flow.
   /// Returns true when the feature can be used (granted, limited, or
   /// provisional). Use [requestResult] when you need to know *why* a request

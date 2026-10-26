@@ -1,74 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smart_permission/smart_permission.dart';
-
-/// Test double driving the flows without platform channels.
-class FakeGateway implements SmartPermissionGateway {
-  final Map<Permission, PermissionStatus> statuses =
-      <Permission, PermissionStatus>{};
-
-  /// Statuses returned by successive request() calls, per permission.
-  /// When exhausted (or absent), the current status is returned.
-  final Map<Permission, List<PermissionStatus>> requestQueue =
-      <Permission, List<PermissionStatus>>{};
-
-  /// Applied to [statuses] when the user "returns from settings".
-  final Map<Permission, PermissionStatus> afterSettings =
-      <Permission, PermissionStatus>{};
-
-  bool openSettingsResult = true;
-  int openSettingsCalls = 0;
-  int waitForReturnCalls = 0;
-  bool throwOnStatus = false;
-  bool throwOnRequest = false;
-
-  /// Mimics Android: `status` reports `denied` for a permanently denied
-  /// permission; only `request()` returns `permanentlyDenied`.
-  bool androidStatusSemantics = false;
-
-  @override
-  Future<PermissionStatus> status(Permission permission) async {
-    if (throwOnStatus) throw StateError('status failure');
-    final s = statuses[permission] ?? PermissionStatus.denied;
-    if (androidStatusSemantics && s == PermissionStatus.permanentlyDenied) {
-      return PermissionStatus.denied;
-    }
-    return s;
-  }
-
-  @override
-  Future<PermissionStatus> request(Permission permission) async {
-    if (throwOnRequest) throw StateError('request failure');
-    final queue = requestQueue[permission];
-    final next = (queue != null && queue.isNotEmpty)
-        ? queue.removeAt(0)
-        : (statuses[permission] ?? PermissionStatus.denied);
-    statuses[permission] = next;
-    return next;
-  }
-
-  @override
-  Future<Map<Permission, PermissionStatus>> requestMultiple(
-      List<Permission> permissions) async {
-    final out = <Permission, PermissionStatus>{};
-    for (final p in permissions) {
-      out[p] = await request(p);
-    }
-    return out;
-  }
-
-  @override
-  Future<bool> openAppSettings() async {
-    openSettingsCalls++;
-    return openSettingsResult;
-  }
-
-  @override
-  Future<void> waitForSettingsReturn() async {
-    waitForReturnCalls++;
-    statuses.addAll(afterSettings);
-  }
-}
+import 'package:smart_permission/testing.dart';
 
 Future<BuildContext> pumpHost(WidgetTester tester) async {
   late BuildContext hostContext;
@@ -88,12 +21,12 @@ Future<BuildContext> pumpHost(WidgetTester tester) async {
 }
 
 void main() {
-  late FakeGateway gateway;
+  late FakeSmartPermissionGateway gateway;
   late InMemoryPermissionAnalyticsTracker analytics;
 
   setUp(() {
     SmartPermission.config.resetToDefaults();
-    gateway = FakeGateway();
+    gateway = FakeSmartPermissionGateway();
     analytics = InMemoryPermissionAnalyticsTracker();
     SmartPermission.config
       ..gateway = gateway
@@ -120,7 +53,7 @@ void main() {
 
     testWidgets('granted on first native prompt', (tester) async {
       final ctx = await pumpHost(tester);
-      gateway.requestQueue[Permission.camera] = [PermissionStatus.granted];
+      gateway.requestResults[Permission.camera] = [PermissionStatus.granted];
 
       final result = await SmartPermission.requestResult(
           context: ctx, permission: Permission.camera);
@@ -132,7 +65,7 @@ void main() {
 
     testWidgets('denied then allowed via rationale dialog', (tester) async {
       final ctx = await pumpHost(tester);
-      gateway.requestQueue[Permission.camera] = [
+      gateway.requestResults[Permission.camera] = [
         PermissionStatus.denied,
         PermissionStatus.granted,
       ];
@@ -152,7 +85,7 @@ void main() {
 
     testWidgets('denied and user declines rationale', (tester) async {
       final ctx = await pumpHost(tester);
-      gateway.requestQueue[Permission.camera] = [PermissionStatus.denied];
+      gateway.requestResults[Permission.camera] = [PermissionStatus.denied];
 
       final future = SmartPermission.requestResult(
           context: ctx, permission: Permission.camera);
@@ -167,10 +100,11 @@ void main() {
     testWidgets('permanently denied: settings flow re-checks after return',
         (tester) async {
       final ctx = await pumpHost(tester);
-      gateway.requestQueue[Permission.camera] = [
+      gateway.requestResults[Permission.camera] = [
         PermissionStatus.permanentlyDenied,
       ];
-      gateway.afterSettings[Permission.camera] = PermissionStatus.granted;
+      gateway.statusesAfterSettings[Permission.camera] =
+          PermissionStatus.granted;
 
       final future = SmartPermission.requestResult(
           context: ctx, permission: Permission.camera);
@@ -182,17 +116,17 @@ void main() {
 
       expect(await future, SmartPermissionResult.granted);
       expect(gateway.openSettingsCalls, 1);
-      expect(gateway.waitForReturnCalls, 1,
+      expect(gateway.waitForSettingsReturnCalls, 1,
           reason: 'must wait for the user to return before re-checking');
     });
 
     testWidgets('permanently denied: settings cannot open shows fallback',
         (tester) async {
       final ctx = await pumpHost(tester);
-      gateway.requestQueue[Permission.camera] = [
+      gateway.requestResults[Permission.camera] = [
         PermissionStatus.permanentlyDenied,
       ];
-      gateway.openSettingsResult = false;
+      gateway.canOpenSettings = false;
 
       final future = SmartPermission.requestResult(
           context: ctx, permission: Permission.camera);
@@ -209,7 +143,7 @@ void main() {
 
     testWidgets('restricted shows informational dialog', (tester) async {
       final ctx = await pumpHost(tester);
-      gateway.requestQueue[Permission.camera] = [PermissionStatus.restricted];
+      gateway.requestResults[Permission.camera] = [PermissionStatus.restricted];
 
       final future = SmartPermission.requestResult(
           context: ctx, permission: Permission.camera);
@@ -229,7 +163,7 @@ void main() {
     testWidgets('rationale-first explains before the native prompt',
         (tester) async {
       final ctx = await pumpHost(tester);
-      gateway.requestQueue[Permission.camera] = [PermissionStatus.granted];
+      gateway.requestResults[Permission.camera] = [PermissionStatus.granted];
 
       final future = SmartPermission.requestResult(
         context: ctx,
@@ -254,7 +188,7 @@ void main() {
       final ctx = await pumpHost(tester);
       gateway
         ..androidStatusSemantics = true
-        ..requestQueue[Permission.camera] = [
+        ..requestResults[Permission.camera] = [
           PermissionStatus.permanentlyDenied,
           PermissionStatus.permanentlyDenied,
         ];
@@ -293,7 +227,7 @@ void main() {
       final ctx = await pumpHost(tester);
       gateway
         ..androidStatusSemantics = true
-        ..requestQueue[Permission.camera] = [
+        ..requestResults[Permission.camera] = [
           PermissionStatus.permanentlyDenied,
           PermissionStatus.denied,
         ];
@@ -320,7 +254,7 @@ void main() {
     });
 
     test('platform error surfaces as error result and onError', () async {
-      gateway.throwOnStatus = true;
+      gateway.statusError = StateError('status failure');
       Object? seen;
       SmartPermission.config.onError = (e, st) => seen = e;
 
@@ -332,7 +266,7 @@ void main() {
     });
 
     test('no context and no navigatorKey: native-only flow', () async {
-      gateway.requestQueue[Permission.camera] = [PermissionStatus.denied];
+      gateway.requestResults[Permission.camera] = [PermissionStatus.denied];
 
       final result =
           await SmartPermission.requestResult(permission: Permission.camera);
@@ -349,7 +283,7 @@ void main() {
         navigatorKey: key,
         home: const Scaffold(body: SizedBox.shrink()),
       ));
-      gateway.requestQueue[Permission.camera] = [PermissionStatus.denied];
+      gateway.requestResults[Permission.camera] = [PermissionStatus.denied];
 
       final future =
           SmartPermission.requestResult(permission: Permission.camera);
@@ -368,8 +302,10 @@ void main() {
         (tester) async {
       final ctx = await pumpHost(tester);
       gateway.statuses[Permission.camera] = PermissionStatus.granted;
-      gateway.requestQueue[Permission.microphone] = [PermissionStatus.granted];
-      gateway.requestQueue[Permission.location] = [PermissionStatus.denied];
+      gateway.requestResults[Permission.microphone] = [
+        PermissionStatus.granted
+      ];
+      gateway.requestResults[Permission.location] = [PermissionStatus.denied];
 
       final future = SmartPermission.requestMultipleResults(
         context: ctx,
@@ -395,7 +331,7 @@ void main() {
 
     testWidgets('combined retry grants remaining permissions', (tester) async {
       final ctx = await pumpHost(tester);
-      gateway.requestQueue[Permission.location] = [
+      gateway.requestResults[Permission.location] = [
         PermissionStatus.denied,
         PermissionStatus.granted,
       ];
@@ -415,14 +351,16 @@ void main() {
     testWidgets('permanently denied group gets one settings dialog',
         (tester) async {
       final ctx = await pumpHost(tester);
-      gateway.requestQueue[Permission.camera] = [
+      gateway.requestResults[Permission.camera] = [
         PermissionStatus.permanentlyDenied,
       ];
-      gateway.requestQueue[Permission.microphone] = [
+      gateway.requestResults[Permission.microphone] = [
         PermissionStatus.permanentlyDenied,
       ];
-      gateway.afterSettings[Permission.camera] = PermissionStatus.granted;
-      gateway.afterSettings[Permission.microphone] = PermissionStatus.granted;
+      gateway.statusesAfterSettings[Permission.camera] =
+          PermissionStatus.granted;
+      gateway.statusesAfterSettings[Permission.microphone] =
+          PermissionStatus.granted;
 
       final future = SmartPermission.requestMultipleResults(
         context: ctx,
@@ -444,7 +382,7 @@ void main() {
   group('backward-compatible bool API', () {
     testWidgets('request returns true for limited access', (tester) async {
       final ctx = await pumpHost(tester);
-      gateway.requestQueue[Permission.photos] = [PermissionStatus.limited];
+      gateway.requestResults[Permission.photos] = [PermissionStatus.limited];
 
       final ok =
           await SmartPermission.request(ctx, permission: Permission.photos);
@@ -455,7 +393,7 @@ void main() {
     testWidgets('requestMultiple returns bool map', (tester) async {
       final ctx = await pumpHost(tester);
       gateway.statuses[Permission.camera] = PermissionStatus.granted;
-      gateway.requestQueue[Permission.microphone] = [PermissionStatus.denied];
+      gateway.requestResults[Permission.microphone] = [PermissionStatus.denied];
 
       final future = SmartPermission.requestMultiple(ctx,
           permissions: [Permission.camera, Permission.microphone]);
@@ -475,7 +413,7 @@ void main() {
         notNow: 'Plus tard',
       );
       final ctx = await pumpHost(tester);
-      gateway.requestQueue[Permission.camera] = [PermissionStatus.denied];
+      gateway.requestResults[Permission.camera] = [PermissionStatus.denied];
 
       final future = SmartPermission.requestResult(
           context: ctx, permission: Permission.camera);
@@ -491,7 +429,7 @@ void main() {
 
   group('provisional and limited statuses', () {
     test('provisional counts as canProceed', () async {
-      gateway.requestQueue[Permission.notification] = [
+      gateway.requestResults[Permission.notification] = [
         PermissionStatus.provisional,
       ];
 

@@ -93,6 +93,35 @@ class SmartPermissionCore {
     }
   }
 
+  /// Current outcome for [permission] without prompting; see
+  /// `SmartPermission.status`.
+  Future<SmartPermissionResult> statusResult(Permission permission) async {
+    PermissionStatus status;
+    try {
+      status = await _cfg.gateway.status(permission);
+    } catch (e, st) {
+      _reportError('Failed to read status for $permission', e, st);
+      return SmartPermissionResult.error;
+    }
+    _remember(permission, status, fromRequest: false);
+    // Android reports a blocked permission as plain `denied`; use what a
+    // request told us earlier this session.
+    if (status.isDenied && _blockedThisSession.contains(permission)) {
+      return SmartPermissionResult.permanentlyDenied;
+    }
+    return _resultFor(status);
+  }
+
+  /// Opens the app settings screen; see `SmartPermission.openSettings`.
+  Future<bool> openSettings() async {
+    try {
+      return await _cfg.gateway.openAppSettings();
+    } catch (e, st) {
+      _reportError('openAppSettings threw', e, st);
+      return false;
+    }
+  }
+
   /// Runs the full single-permission flow; see
   /// `SmartPermission.requestResult`.
   Future<SmartPermissionResult> requestResult(

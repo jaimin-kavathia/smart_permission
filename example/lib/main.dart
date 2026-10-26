@@ -381,6 +381,33 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
             label: const Text('Request Camera + Microphone'),
           ),
           const SizedBox(height: 24),
+          Text('PermissionGate', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Card(
+            child: SizedBox(
+              height: 200,
+              // Shows the content only while the camera is usable; re-checks
+              // automatically when you come back from the system settings.
+              child: PermissionGate(
+                permission: Permission.camera,
+                style: widget.style,
+                description: 'We need camera to scan QR codes.',
+                onChanged: (r) =>
+                    setState(() => _grants[Permission.camera] = r.canProceed),
+                builder: (context) => const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.qr_code_scanner, size: 48),
+                      SizedBox(height: 8),
+                      Text('Camera ready: scanner would go here'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
           Text('Results', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           ..._grants.entries.map(

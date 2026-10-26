@@ -1,3 +1,30 @@
+## 1.1.0
+
+New features; no breaking changes.
+
+### New
+
+- `PermissionGate` widget: shows its `builder` only while a permission is
+  usable (granted, limited, or provisional), otherwise a fallback with a call
+  to action ("Allow" runs the request flow, "Open Settings" appears when
+  permanently denied, restricted shows an explanation). Re-checks
+  automatically when the app returns to the foreground. Supports a custom
+  `fallbackBuilder`, `loadingBuilder`, `requestOnMount`, and `onChanged`.
+- Silent checks that never prompt: `SmartPermission.status`,
+  `SmartPermission.statuses`, and `SmartPermission.hasPermission`. On
+  Android, `status` reports `permanentlyDenied` once a request in the current
+  app session has found it.
+- `SmartPermission.openSettings()`: opens the app settings through the
+  configured gateway (so it can be faked in tests).
+- `package:smart_permission/testing.dart` with `FakeSmartPermissionGateway`:
+  a ready-made in-memory gateway for widget tests (statuses, queued request
+  results, settings changes, errors, Android status semantics, and a log of
+  requested permissions).
+
+### Example
+
+- Added a `PermissionGate` demo card.
+
 ## 1.0.2
 
 Maintenance release.
