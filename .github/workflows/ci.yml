@@ -68,6 +68,11 @@ jobs:
           channel: stable
           cache: true
 
+      # The example app targets a newer SDK; pub would try to resolve it
+      # alongside the package, so leave it out of this job.
+      - name: Exclude the example app
+        run: rm -rf example
+
       # flutter_lints 6 needs Dart 3.8; it is a dev dependency only, so use
       # the last version that supports this SDK.
       - name: Use lints compatible with the minimum SDK
