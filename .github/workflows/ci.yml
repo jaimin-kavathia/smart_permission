@@ -7,51 +7,77 @@ on:
     branches: [main, master]
 
 jobs:
-  build:
+  stable:
+    name: Latest stable Flutter
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.35.4"
           channel: stable
-          architecture: x64
-
-      - name: Cache pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          cache: true
 
       - name: Install dependencies
         run: |
           flutter pub get
-          if [ -d "example" ]; then
-            (cd example && flutter pub get)
-          fi
+          (cd example && flutter pub get)
 
-      - name: Format code (root and example)
-        run: |
-          dart format -o write .
-          if [ -d "example" ]; then
-            (cd example && dart format -o write . || true)
-          fi
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib test example/lib example/test
 
       - name: Analyze root
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        run: flutter analyze
 
       - name: Analyze example
-        if: ${{ hashFiles('example/pubspec.yaml') != '' }}
-        run: (cd example && flutter analyze --no-fatal-infos --no-fatal-warnings)
+        run: (cd example && flutter analyze)
 
       - name: Run tests (root)
         run: flutter test --no-pub
 
       - name: Run tests (example)
-        if: ${{ hashFiles('example/pubspec.yaml') != '' }}
         run: (cd example && flutter test --no-pub)
+
+      - name: Build example for web (WebAssembly)
+        run: (cd example && flutter build web --wasm)
+
+      - name: Publish dry run
+        run: dart pub publish --dry-run
+
+      - name: pub.dev score (fails if any points are lost)
+        run: |
+          dart pub global activate pana
+          dart pub global run pana --exit-code-threshold 0 .
+
+  minimum:
+    name: Minimum supported Flutter (lowest dependencies)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Keep in sync with `environment.flutter` in pubspec.yaml.
+          flutter-version: "3.27.0"
+          channel: stable
+          cache: true
+
+      # flutter_lints 6 needs Dart 3.8; it is a dev dependency only, so use
+      # the last version that supports this SDK.
+      - name: Use lints compatible with the minimum SDK
+        run: flutter pub add dev:flutter_lints:^5.0.0
+
+      - name: Resolve lowest allowed dependency versions
+        run: flutter pub downgrade
+
+      - name: Analyze
+        run: flutter analyze lib test
+
+      - name: Run tests
+        run: flutter test --no-pub

@@ -1,3 +1,37 @@
+## 1.0.2
+
+Maintenance release.
+
+### Fixed
+
+- Corrected the minimum supported versions to **Flutter 3.27 / Dart 3.6**.
+  The previous `>=3.13.0` claim was wrong: the built-in Material dialog uses
+  `DialogThemeData` (added in Flutter 3.27), and `permission_handler` 13
+  itself requires Dart 3.6.
+- Android: with `showRationaleFirst` / `showRationaleBeforeRequest`, a
+  permission that was already permanently denied no longer shows the
+  rationale dialog immediately followed by the settings dialog on repeat
+  requests. Android's `status` never reports `permanentlyDenied` (only
+  `request()` does), so the package now remembers permanent denials reported
+  during the app session and goes straight to the settings dialog.
+- A `titleProvider` / `descriptionProvider` that returns `null` for a
+  permission now falls back to the built-in title/description (as the README
+  examples assume) instead of a generic text.
+- Fallback texts no longer show raw enum names such as `Permission.camera`;
+  they use a readable name (e.g. "location when in use").
+- The last-resort dialog title now comes from
+  `strings.permissionRequiredTitle`, so it can be localized.
+
+### Changed
+
+- Requires `permission_handler` ^13.0.2, which fixes Android reporting
+  `permanentlyDenied` after the user picked "Ask every time" in settings.
+- Every public API element now has a doc comment.
+- CI checks formatting strictly, treats analyzer issues as failures, tests
+  against both the latest stable and the minimum supported Flutter (with the
+  lowest allowed dependencies), builds the example for web with WebAssembly,
+  and fails if the package would lose pub.dev points.
+
 ## 1.0.1
 
 Documentation polish.

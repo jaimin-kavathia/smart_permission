@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smart_permission/smart_permission.dart';
 
 void main() {
+  tearDown(() => SmartPermission.config.resetToDefaults());
+
   group('SmartPermissionConfig resolvers', () {
     test('falls back to built-in defaults when no providers/overrides', () {
       // Ensure clean config
@@ -46,6 +48,20 @@ void main() {
 
       expect(title, 'Mic Title');
       expect(desc, 'Mic Desc');
+    });
+
+    test('provider returning null falls back to built-in texts', () {
+      SmartPermission.config.titleProvider =
+          (p) => p == Permission.microphone ? 'Mic Title' : null;
+      SmartPermission.config.descriptionProvider =
+          (p) => p == Permission.microphone ? 'Mic Desc' : null;
+
+      expect(SmartPermission.config.resolveTitle(Permission.camera, null),
+          'Camera Access');
+      expect(
+        SmartPermission.config.resolveDescription(Permission.camera, null),
+        'We need camera access to capture photos or scan codes.',
+      );
     });
   });
 

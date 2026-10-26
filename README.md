@@ -72,8 +72,10 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  smart_permission: ^1.0.0
+  smart_permission: ^1.0.2
 ```
+
+Requires **Flutter 3.27+** (Dart 3.6+).
 
 > **Android note:** `smart_permission` 1.0.0+ depends on `permission_handler` 13,
 > which requires your app to build with **compileSdk 37**. Flutter's default is

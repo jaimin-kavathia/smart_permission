@@ -4,10 +4,25 @@ import 'package:permission_handler/permission_handler.dart';
 import '../ui/dialogs.dart';
 import '../ui/permission_dialog_style.dart';
 import 'permission_gateway.dart';
+import 'smart_permission_core.dart';
 import 'strings.dart';
 
+/// Returns a description for [permission], or null to use the built-in one.
 typedef DescriptionProvider = String? Function(Permission permission);
+
+/// Returns a title for [permission], or null to use the built-in one.
 typedef TitleProvider = String? Function(Permission permission);
+
+/// Human-readable name for [permission], e.g. `location when in use` for
+/// `Permission.locationWhenInUse`. Used when no title or description is
+/// known.
+String permissionDisplayName(Permission permission) {
+  final raw = permission.toString();
+  final name = raw.substring(raw.lastIndexOf('.') + 1);
+  return name
+      .replaceAllMapped(RegExp('[A-Z]'), (m) => ' ${m[0]!.toLowerCase()}')
+      .trim();
+}
 
 /// Hook interface to observe user decisions.
 ///
@@ -37,11 +52,29 @@ abstract class PermissionAnalyticsTracker {
   void onRestricted(Permission permission) {}
 }
 
+/// Default tracker that counts each hook per permission in memory.
+///
+/// Handy for debugging and tests:
+/// ```dart
+/// final tracker = InMemoryPermissionAnalyticsTracker();
+/// SmartPermission.config.analytics = tracker;
+/// // ...
+/// print(tracker.deniedCounts[Permission.camera]);
+/// ```
 class InMemoryPermissionAnalyticsTracker extends PermissionAnalyticsTracker {
+  /// How often a request flow started, per permission.
   final Map<Permission, int> requestedCounts = <Permission, int>{};
+
+  /// How often a flow ended usable (granted, limited, or provisional).
   final Map<Permission, int> grantedCounts = <Permission, int>{};
+
+  /// How often the user denied, per permission.
   final Map<Permission, int> deniedCounts = <Permission, int>{};
+
+  /// How often a flow ended permanently denied, per permission.
   final Map<Permission, int> permanentlyDeniedCounts = <Permission, int>{};
+
+  /// How often the OS reported the permission as restricted.
   final Map<Permission, int> restrictedCounts = <Permission, int>{};
 
   @override
@@ -84,6 +117,8 @@ class InMemoryPermissionAnalyticsTracker extends PermissionAnalyticsTracker {
 /// ```
 class SmartPermissionConfig {
   SmartPermissionConfig._internal();
+
+  /// The shared configuration, also available as `SmartPermission.config`.
   static final SmartPermissionConfig instance =
       SmartPermissionConfig._internal();
 
@@ -92,11 +127,14 @@ class SmartPermissionConfig {
   /// is omitted). Assign the same key you pass to your `MaterialApp`.
   GlobalKey<NavigatorState>? navigatorKey;
 
+  /// Replaces the built-in Material/Cupertino dialogs with your own UI.
+  /// Return true for the primary action, false (or null) otherwise.
   PermissionDialogBuilder? customDialogBuilder;
 
   /// Style used when a call does not specify one.
   PermissionDialogStyle defaultDialogStyle = PermissionDialogStyle.adaptive;
 
+  /// Receives request/grant/deny events; see [PermissionAnalyticsTracker].
   PermissionAnalyticsTracker analytics = InMemoryPermissionAnalyticsTracker();
 
   /// All user-facing dialog strings; replace to localize.
@@ -129,15 +167,21 @@ class SmartPermissionConfig {
     primaryColor = null;
     descriptionProvider = null;
     titleProvider = null;
+    SmartPermissionCore.resetSessionState();
   }
 
-  // Theming
-  Brightness? brightness; // light/dark
-  Color? primaryColor; // seed/primary color
+  /// Forces light or dark dialogs. Defaults to the ambient theme.
+  Brightness? brightness;
 
-  // Platform-aware description provider
+  /// Seed (Material) or primary (Cupertino) color for the built-in dialogs.
+  Color? primaryColor;
+
+  /// Supplies per-permission descriptions; return null to fall back to the
+  /// built-in text.
   DescriptionProvider? descriptionProvider;
-  // Platform-aware title provider
+
+  /// Supplies per-permission titles; return null to fall back to the
+  /// built-in title.
   TitleProvider? titleProvider;
 
   // Built-in defaults for titles and descriptions per permission.
@@ -245,27 +289,33 @@ class SmartPermissionConfig {
     Permission.unknown: 'This permission is required for full functionality.',
   };
 
+  /// Description shown for [permission]: [explicitDescription] if
+  /// non-empty, else [descriptionProvider], else the built-in text, else a
+  /// generic message from [strings].
   String? resolveDescription(
       Permission permission, String? explicitDescription) {
     if (explicitDescription != null && explicitDescription.isNotEmpty) {
       return explicitDescription;
     }
-    final provider = descriptionProvider;
-    if (provider != null) return provider(permission);
+    final fromProvider = descriptionProvider?.call(permission);
+    if (fromProvider != null && fromProvider.isNotEmpty) return fromProvider;
     // Built-in default
     final builtIn = _defaultDescriptions[permission];
     if (builtIn != null) return builtIn;
     // Fallback generic (localizable via [strings])
-    return strings.formatGenericRationale('$permission');
+    return strings.formatGenericRationale(permissionDisplayName(permission));
   }
 
+  /// Title shown for [permission]: [explicitTitle] if non-empty, else
+  /// [titleProvider], else the built-in title, else
+  /// [SmartPermissionStrings.permissionRequiredTitle].
   String? resolveTitle(Permission permission, String? explicitTitle) {
     if (explicitTitle != null && explicitTitle.isNotEmpty) return explicitTitle;
-    final provider = titleProvider;
-    if (provider != null) return provider(permission);
+    final fromProvider = titleProvider?.call(permission);
+    if (fromProvider != null && fromProvider.isNotEmpty) return fromProvider;
     // Built-in default
     final builtIn = _defaultTitles[permission];
     if (builtIn != null) return builtIn;
-    return 'Permission required';
+    return strings.permissionRequiredTitle;
   }
 }

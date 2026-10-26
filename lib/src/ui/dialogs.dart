@@ -90,7 +90,6 @@ Future<bool?> showPermissionDialog(
       );
     case PermissionDialogStyle.cupertino:
       final cfg = SmartPermissionConfig.instance;
-      final isDark = cfg.brightness == Brightness.dark;
       return showCupertinoDialog<bool>(
         context: context,
         builder: (ctx) => MediaQuery(
@@ -101,10 +100,7 @@ Future<bool?> showPermissionDialog(
           child: CupertinoTheme(
             data: CupertinoThemeData(
               brightness: cfg.brightness,
-              primaryColor: cfg.primaryColor ??
-                  (isDark
-                      ? CupertinoColors.activeBlue
-                      : CupertinoColors.activeBlue),
+              primaryColor: cfg.primaryColor ?? CupertinoColors.activeBlue,
             ),
             child: CupertinoAlertDialog(
               title: Text(title),

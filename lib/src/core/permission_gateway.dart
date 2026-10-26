@@ -33,6 +33,7 @@ abstract class SmartPermissionGateway {
 
 /// Production gateway backed by `permission_handler`.
 class DefaultSmartPermissionGateway implements SmartPermissionGateway {
+  /// Creates the default gateway.
   const DefaultSmartPermissionGateway();
 
   @override

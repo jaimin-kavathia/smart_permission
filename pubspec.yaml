@@ -1,6 +1,6 @@
 name: smart_permission
 description: "Flutter runtime permissions made easy: one-line requests, adaptive dialogs, and full flows on Android & iOS."
-version: 1.0.1
+version: 1.0.2
 repository: https://github.com/jaimin-kavathia/smart_permission
 issue_tracker: https://github.com/jaimin-kavathia/smart_permission/issues
 documentation: https://pub.dev/documentation/smart_permission/latest/
@@ -13,13 +13,13 @@ topics:
   - app-settings
 
 environment:
-  sdk: ^3.4.0
-  flutter: ">=3.13.0"
+  sdk: ^3.6.0
+  flutter: ">=3.27.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  permission_handler: ^13.0.1
+  permission_handler: ^13.0.2
 
 dev_dependencies:
   flutter_test:

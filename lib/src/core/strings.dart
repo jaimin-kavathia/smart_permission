@@ -12,6 +12,8 @@
 /// Messages containing `{permissions}` or `{permission}` are templates; the
 /// placeholder is replaced at display time.
 class SmartPermissionStrings {
+  /// Creates a set of strings; any string not passed keeps its English
+  /// default.
   const SmartPermissionStrings({
     this.allow = 'Allow',
     this.notNow = 'Not now',
@@ -40,17 +42,40 @@ class SmartPermissionStrings {
         'This feature needs permission: {permission}.',
   });
 
+  /// Primary button of the rationale dialog.
   final String allow;
+
+  /// Secondary button of the rationale dialog.
   final String notNow;
+
+  /// Secondary button of the settings and informational dialogs.
   final String cancel;
+
+  /// Primary button of informational dialogs.
   final String ok;
+
+  /// Primary button of the permanently-denied dialog.
   final String openSettings;
+
+  /// Fallback title of the rationale dialog.
   final String permissionRequiredTitle;
+
+  /// Fallback title of the permanently-denied dialog.
   final String permissionBlockedTitle;
+
+  /// Fallback title of the restricted dialog.
   final String permissionRestrictedTitle;
+
+  /// Appended to the description in the permanently-denied dialog.
   final String blockedMessage;
+
+  /// Message of the restricted dialog.
   final String restrictedMessage;
+
+  /// Title shown when app settings cannot be opened automatically.
   final String openSettingsManuallyTitle;
+
+  /// Message shown when app settings cannot be opened automatically.
   final String openSettingsManuallyMessage;
 
   /// Template; `{permissions}` is replaced with a comma-separated list of
@@ -64,12 +89,15 @@ class SmartPermissionStrings {
   /// Template; `{permission}` is replaced with the permission name.
   final String genericRationaleMessage;
 
+  /// [multipleRationaleMessage] with [permissions] filled in.
   String formatMultipleRationale(String permissions) =>
       multipleRationaleMessage.replaceAll('{permissions}', permissions);
 
+  /// [multipleBlockedMessage] with [permissions] filled in.
   String formatMultipleBlocked(String permissions) =>
       multipleBlockedMessage.replaceAll('{permissions}', permissions);
 
+  /// [genericRationaleMessage] with [permission] filled in.
   String formatGenericRationale(String permission) =>
       genericRationaleMessage.replaceAll('{permission}', permission);
 }

@@ -22,10 +22,18 @@ class FakeGateway implements SmartPermissionGateway {
   bool throwOnStatus = false;
   bool throwOnRequest = false;
 
+  /// Mimics Android: `status` reports `denied` for a permanently denied
+  /// permission; only `request()` returns `permanentlyDenied`.
+  bool androidStatusSemantics = false;
+
   @override
   Future<PermissionStatus> status(Permission permission) async {
     if (throwOnStatus) throw StateError('status failure');
-    return statuses[permission] ?? PermissionStatus.denied;
+    final s = statuses[permission] ?? PermissionStatus.denied;
+    if (androidStatusSemantics && s == PermissionStatus.permanentlyDenied) {
+      return PermissionStatus.denied;
+    }
+    return s;
   }
 
   @override
@@ -238,6 +246,77 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(await future, SmartPermissionResult.granted);
+    });
+
+    testWidgets(
+        'rationale-first is skipped once Android reported permanent denial',
+        (tester) async {
+      final ctx = await pumpHost(tester);
+      gateway
+        ..androidStatusSemantics = true
+        ..requestQueue[Permission.camera] = [
+          PermissionStatus.permanentlyDenied,
+          PermissionStatus.permanentlyDenied,
+        ];
+
+      // First call: status says `denied`, so the rationale is shown, then
+      // the request reveals the permanent denial.
+      var future = SmartPermission.requestResult(
+        context: ctx,
+        permission: Permission.camera,
+        showRationaleFirst: true,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Allow'));
+      await tester.pumpAndSettle();
+      expect(find.text('Open Settings'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(await future, SmartPermissionResult.permanentlyDenied);
+
+      // Second call: straight to the settings dialog, no rationale first.
+      future = SmartPermission.requestResult(
+        context: ctx,
+        permission: Permission.camera,
+        showRationaleFirst: true,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Allow'), findsNothing);
+      expect(find.text('Open Settings'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(await future, SmartPermissionResult.permanentlyDenied);
+    });
+
+    testWidgets('rationale-first returns after the user re-enables asking',
+        (tester) async {
+      final ctx = await pumpHost(tester);
+      gateway
+        ..androidStatusSemantics = true
+        ..requestQueue[Permission.camera] = [
+          PermissionStatus.permanentlyDenied,
+          PermissionStatus.denied,
+        ];
+
+      // Learn that camera is blocked (no rationale, no dialogs: no context).
+      expect(await SmartPermission.requestResult(permission: Permission.camera),
+          SmartPermissionResult.permanentlyDenied);
+      // The user switches it back to "Ask every time"; the next native
+      // request shows the OS prompt and the user denies it normally.
+      gateway.statuses[Permission.camera] = PermissionStatus.denied;
+      expect(await SmartPermission.requestResult(permission: Permission.camera),
+          SmartPermissionResult.denied);
+
+      final future = SmartPermission.requestResult(
+        context: ctx,
+        permission: Permission.camera,
+        showRationaleFirst: true,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Allow'), findsOneWidget);
+      await tester.tap(find.text('Not now'));
+      await tester.pumpAndSettle();
+      expect(await future, SmartPermissionResult.denied);
     });
 
     test('platform error surfaces as error result and onError', () async {

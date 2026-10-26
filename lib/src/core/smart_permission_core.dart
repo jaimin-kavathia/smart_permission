@@ -11,9 +11,36 @@ import 'smart_permission_result.dart';
 /// Handles the branching logic for first request, denied, permanently denied,
 /// restricted, showing dialogs, and returning the final result.
 class SmartPermissionCore {
+  /// Creates the flow implementation.
   const SmartPermissionCore();
 
   static SmartPermissionConfig get _cfg => SmartPermissionConfig.instance;
+
+  /// Permissions a native request reported as permanently denied during this
+  /// app session. Android's `status` never reports `permanentlyDenied` (only
+  /// `request()` does), so without this a rationale-first dialog would be
+  /// shown for a blocked permission, immediately followed by the settings
+  /// dialog.
+  static final Set<Permission> _blockedThisSession = <Permission>{};
+
+  /// Clears per-session state. Called by
+  /// [SmartPermissionConfig.resetToDefaults].
+  static void resetSessionState() => _blockedThisSession.clear();
+
+  /// Records what a native request ([fromRequest]) or a status check
+  /// reported. A plain `denied` from a status check is ambiguous on Android
+  /// (it may still be blocked), so it leaves the record unchanged.
+  void _remember(
+    Permission permission,
+    PermissionStatus status, {
+    required bool fromRequest,
+  }) {
+    if (status.isPermanentlyDenied) {
+      _blockedThisSession.add(permission);
+    } else if (fromRequest || !status.isDenied) {
+      _blockedThisSession.remove(permission);
+    }
+  }
 
   /// Resolves the context to use for dialogs: the one passed by the caller,
   /// or the one from [SmartPermissionConfig.navigatorKey]. When neither is
@@ -66,6 +93,8 @@ class SmartPermissionCore {
     }
   }
 
+  /// Runs the full single-permission flow; see
+  /// `SmartPermission.requestResult`.
   Future<SmartPermissionResult> requestResult(
     BuildContext? context, {
     required Permission permission,
@@ -89,6 +118,7 @@ class SmartPermissionCore {
       _reportError('Failed to read status for $permission', e, st);
       return SmartPermissionResult.error;
     }
+    _remember(permission, status, fromRequest: false);
     if (_isUsable(status)) return _resultFor(status);
 
     cfg.analytics.onRequested(permission);
@@ -96,14 +126,18 @@ class SmartPermissionCore {
     // Optional explanation before the first native prompt.
     final rationaleFirst = showRationaleFirst ?? cfg.showRationaleBeforeRequest;
     var rationaleShown = false;
-    if (rationaleFirst && status.isDenied && ctx != null && ctx.mounted) {
+    if (rationaleFirst &&
+        status.isDenied &&
+        !_blockedThisSession.contains(permission) &&
+        ctx != null &&
+        ctx.mounted) {
       final proceed = await _showDialog(
         ctx,
         style: effectiveStyle,
         title: cfg.resolveTitle(permission, title) ??
             strings.permissionRequiredTitle,
         message: cfg.resolveDescription(permission, message) ??
-            strings.formatGenericRationale('$permission'),
+            strings.formatGenericRationale(permissionDisplayName(permission)),
         primaryText: okButtonText ?? strings.allow,
         secondaryText: denyButtonText ?? strings.notNow,
       );
@@ -121,6 +155,7 @@ class SmartPermissionCore {
       _reportError('Request threw for $permission', e, st);
       return SmartPermissionResult.error;
     }
+    _remember(permission, requested, fromRequest: true);
     if (_isUsable(requested)) {
       cfg.analytics.onGranted(permission);
       return _resultFor(requested);
@@ -138,7 +173,7 @@ class SmartPermissionCore {
         title: cfg.resolveTitle(permission, title) ??
             strings.permissionRequiredTitle,
         message: cfg.resolveDescription(permission, message) ??
-            strings.formatGenericRationale('$permission'),
+            strings.formatGenericRationale(permissionDisplayName(permission)),
         primaryText: okButtonText ?? strings.allow,
         secondaryText: denyButtonText ?? strings.notNow,
       );
@@ -150,6 +185,7 @@ class SmartPermissionCore {
           _reportError('Second request threw for $permission', e, st);
           return SmartPermissionResult.error;
         }
+        _remember(permission, second, fromRequest: true);
         if (_isUsable(second)) {
           cfg.analytics.onGranted(permission);
           return _resultFor(second);
@@ -266,7 +302,9 @@ class SmartPermissionCore {
     final results = <Permission, SmartPermissionResult>{};
     for (final p in permissions) {
       try {
-        results[p] = _resultFor(await cfg.gateway.status(p));
+        final s = await cfg.gateway.status(p);
+        _remember(p, s, fromRequest: false);
+        results[p] = _resultFor(s);
       } catch (e, st) {
         _reportError('Status after settings failed for $p', e, st);
         results[p] = SmartPermissionResult.error;
@@ -275,6 +313,7 @@ class SmartPermissionCore {
     return results;
   }
 
+  /// Runs the batch flow; see `SmartPermission.requestMultipleResults`.
   Future<Map<Permission, SmartPermissionResult>> requestMultipleResults(
     BuildContext? context, {
     required List<Permission> permissions,
@@ -296,6 +335,7 @@ class SmartPermissionCore {
     for (final p in permissions) {
       try {
         final s = await cfg.gateway.status(p);
+        _remember(p, s, fromRequest: false);
         if (_isUsable(s)) {
           results[p] = _resultFor(s);
         } else {
@@ -327,6 +367,7 @@ class SmartPermissionCore {
     final blocked = <Permission>[];
     for (final p in toRequest) {
       final s = statuses[p] ?? PermissionStatus.denied;
+      _remember(p, s, fromRequest: true);
       if (_isUsable(s)) {
         results[p] = _resultFor(s);
         cfg.analytics.onGranted(p);
@@ -348,8 +389,9 @@ class SmartPermissionCore {
           cfg.analytics.onDenied(p);
         }
       } else {
-        final names =
-            denied.map((p) => cfg.resolveTitle(p, null) ?? '$p').join(', ');
+        final names = denied
+            .map((p) => cfg.resolveTitle(p, null) ?? permissionDisplayName(p))
+            .join(', ');
         final retry = await _showDialog(
           ctx,
           style: effectiveStyle,
@@ -368,6 +410,7 @@ class SmartPermissionCore {
           }
           for (final p in denied) {
             final s = second[p] ?? PermissionStatus.denied;
+            _remember(p, s, fromRequest: true);
             results[p] = _resultFor(s);
             if (_isUsable(s)) {
               cfg.analytics.onGranted(p);
@@ -394,8 +437,9 @@ class SmartPermissionCore {
           cfg.analytics.onPermanentlyDenied(p);
         }
       } else {
-        final names =
-            blocked.map((p) => cfg.resolveTitle(p, null) ?? '$p').join(', ');
+        final names = blocked
+            .map((p) => cfg.resolveTitle(p, null) ?? permissionDisplayName(p))
+            .join(', ');
         final open = await _showDialog(
           ctx,
           style: effectiveStyle,
